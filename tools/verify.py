@@ -26,6 +26,10 @@ def main():
     policy = json.loads((ROOT / 'tools/policy.json').read_text())
     check_payload_sets(ROOT / 'payloads', policy['systems'], policy['device_ids'])
     check_payloads(ROOT / 'payloads')
+    expected = json.loads((ROOT / 'docs/payload-provenance.json').read_text())
+    # Donor patches (acer fork) are ad hoc signed: their bytes and hashes are
+    # pinned in the provenance file instead of the Mod leaf.
+    patched = {ROOT / name: entry for name, entry in expected.get('donor_patches', {}).get('files', {}).items()}
     seen = set()
     for path in sorted((ROOT / 'payloads').rglob('*')):
         assert not path.is_symlink(), path
@@ -42,6 +46,16 @@ def main():
         # adapter's input contract. Never re-sign this file.
         if path.name == 'libigc-tgl.dylib':
             assert sha == APPLE_BACKEND, path
+        if path in patched:
+            entry = patched[path]
+            assert entry['signature'] == 'adhoc', path
+            assert sha == entry['sha256'], path
+            for patch in entry['patches']:
+                for offset, value in ((patch['context_offset'], patch['context_new']), (patch['offset'], patch['new'])):
+                    assert data[offset:offset + len(value) // 2] == bytes.fromhex(value), (path, patch['id'])
+            result = subprocess.run(['codesign', '--verify', '--strict', str(path)], capture_output=True)
+            assert result.returncode == 0, result.stderr
+            continue
         if path.name in {'AppleIntelTGLCompat', 'adapter.dylib', 'TGLVA'}:
             assert b'/Users/' not in data and b'/home/' not in data, path
         run(args.rcodesign, 'verify', path)
@@ -57,7 +71,6 @@ def main():
         bundle = plist.parent.parent
         result = subprocess.run(['codesign', '--verify', '--deep', '--strict', str(bundle)], capture_output=True)
         assert result.returncode == 0 or b'CSSMERR_TP_NOT_TRUSTED' in result.stderr, result.stderr
-    expected = json.loads((ROOT / 'docs/payload-provenance.json').read_text())
     for name, digest in expected['servicing_adapters']['signed_sha256'].items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, name
     # One build supplies every OS. Reject accidentally reintroduced per-OS copies.
