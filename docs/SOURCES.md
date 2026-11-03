@@ -136,3 +136,11 @@ the original patcher's restoration procedure for those.
 Only the pkg and its checksum are release assets. AMFIPass and the uninstaller
 have independent update schedules. The build does not generate an uninstaller
 or copy either utility into its output.
+
+## Donor driver patch (acer fork)
+
+This fork publishes no patched Apple executable. [`tools/posh_patch.sh`](../tools/posh_patch.sh) patches the installed file instead, checking its hash before and after.
+
+- Tahoe `AppleIntelTGLGraphicsMTLDriver`: `-[MTLIGAccelCommandBuffer dealloc]` skipped `operator delete` of the per-command-buffer POSH block when the buffer was the queue's only active command buffer, while the queue-level POSH pointer is never set, so the block leaked (96 KiB per command buffer). The `jne` at `0x7ed87` becomes two `nop`s, as in JulioNectar's Metal bundle v18 ([`0698648`](https://github.com/JulioNectar/Hackintosh-XPS13Plus-IrisXe-Tahoe/commit/06986480e4d9c1383e57ad4e8e89213b5f124bc9), reported in [issue #12](https://github.com/JulioNectar/Hackintosh-XPS13Plus-IrisXe-Tahoe/issues/12)); no code was taken from that repository.
+- The executable is then signed ad hoc at bundle level (`codesign -f -s -` on the bundle): the nested `impostor.dylib`, `descriptor.dylib` and `libigdmd.dylib` keep their Mod signatures and `CodeResources` is unchanged. It loads under the same AMFI relaxation the Mod chain requires.
+

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (acer/current)
+
+### Added
+
+- Add `tools/posh_patch.sh`, which patches the installed Tahoe Metal driver for a leak: the donor driver skipped freeing the per-command-buffer POSH block when the buffer was the queue's only active command buffer, leaking 96 KiB per command buffer. This fork does not publish the patched file.
+
 ## 0.4.0
 
 Use the latest [WhateverXe](https://github.com/b00t0x/WhateverXe/releases) release with this update.
