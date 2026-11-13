@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (acer/current)
+
+### Fixed
+
+- After installing or upgrading the drivers, the installer clears the per-user Metal shader cache of WindowServer and the console user (`com.apple.metal`, `com.apple.metalfe`, `com.apple.gpuarchiver`). Programs compiled for the previous driver rendered corrupted on every display until they were rebuilt; the cache rebuilds on the restart the package asks for.
+
 ## 0.4.4
 
 Update [WhateverXe](https://github.com/b00t0x/WhateverXe/releases) and WhateverXe Graphics together.
